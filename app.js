@@ -250,6 +250,7 @@
     audio.pause();
     audio.currentTime = 0;
     audio.volume = 1;
+    cancelSleepTimer();
     state.queue = [];
     state.queueIndex = 0;
     el("progress").value = 0;
@@ -416,7 +417,6 @@
 
   function setSleepTimer(mins) {
     clearTimeout(state.timer.tickId);
-    clearInterval(state.timer.fadeId);
     state.timer.mins = mins;
     if (mins === 0) {
       state.timer.endsAt = null;
@@ -432,33 +432,25 @@
     if (!state.timer.endsAt) return;
     const remainingMs = state.timer.endsAt - Date.now();
     if (remainingMs <= 0) {
-      startGoodnightFade();
+      stopFromTimer();
       return;
     }
     el("timer-badge").textContent = Math.max(1, Math.round(remainingMs / 60000));
-    state.timer.tickId = setTimeout(tickTimerBadge, 15000);
+    state.timer.tickId = setTimeout(tickTimerBadge, Math.min(15000, remainingMs));
   }
 
-  function startGoodnightFade() {
+  function stopFromTimer() {
     el("timer-badge").hidden = true;
-    el("goodnight-overlay").dataset.open = "true";
-    el("goodnight-overlay").setAttribute("aria-hidden", "false");
-
-    const fadeSteps = 24;
-    const fadeIntervalMs = 500; // ~12s total fade
-    let step = 0;
-    const startVolume = audio.volume;
-    state.timer.fadeId = setInterval(() => {
-      step += 1;
-      audio.volume = Math.max(0, startVolume * (1 - step / fadeSteps));
-      if (step >= fadeSteps) {
-        clearInterval(state.timer.fadeId);
-        audio.pause();
-        audio.volume = 1;
-      }
-    }, fadeIntervalMs);
-
+    document.querySelectorAll("#timer-options .pill").forEach((b) => b.classList.remove("is-active"));
     state.timer.endsAt = null;
+    audio.pause();
+  }
+
+  function cancelSleepTimer() {
+    clearTimeout(state.timer.tickId);
+    state.timer.endsAt = null;
+    el("timer-badge").hidden = true;
+    document.querySelectorAll("#timer-options .pill").forEach((b) => b.classList.remove("is-active"));
   }
 
   // ---------- helpers ----------
